@@ -347,7 +347,10 @@
     </footer>
 
     <div class="wa-wrap">
-        <div class="wa-menu" id="waMenu"></div>
+        <div class="wa-menu" id="waMenu">
+            <a href="https://wa.me/971581252891" target="_blank" rel="noopener">💬 +971 58 125 2891</a>
+            <a href="https://wa.me/971581252871" target="_blank" rel="noopener">💬 +971 58 125 2871</a>
+        </div>
         <button type="button" class="wa" id="waBtn" aria-haspopup="true" aria-expanded="false">💬 WhatsApp</button>
     </div>
 
@@ -386,11 +389,6 @@
 
     <script>
         // ============ COMPANY CONTACT (change numbers here only) ============
-        const WA_NUMBERS = ["971581252891", "971581252871"];   // every inquiry is sent to both numbers
-        const WA_LABELS  = ["+971 58 125 2891", "+971 58 125 2871"];
-        // Automatic WhatsApp sending (optional): paste the CallMeBot key for each number above, in the same order.
-        // Leave "" for a number that has no key yet - that number then uses a normal WhatsApp chat link instead.
-        const WA_BOT_KEYS = ["", ""];
         const MAIL_TO = "tsktrading2025@gmail.com";
 
         // ============ PRODUCT LIST (edit text here) ============
@@ -675,8 +673,6 @@
                 "Requirement: " + g('fMsg')
             ].join("\n");
         }
-        const waUrl = (n, text) => "https://wa.me/" + n + (text ? "?text=" + encodeURIComponent(text) : "");
-
         document.getElementById('sendBtn').addEventListener('click', async () => {
             const form = document.getElementById('enqForm');
             if (!form.reportValidity()) return;
@@ -685,52 +681,24 @@
             const text = buildMessage();
             const g = id => document.getElementById(id).value.trim();
             btn.disabled = true; btn.textContent = 'Sending...';
-
-            // Numbers without an automatic key: open the first WhatsApp chat right now (browsers allow one new tab per click)
-            const manual = WA_NUMBERS.map((n, i) => i).filter(i => !WA_BOT_KEYS[i]);
-            const opened = new Set();
-            if (manual.length && window.open(waUrl(WA_NUMBERS[manual[0]], text), '_blank')) opened.add(manual[0]);
-
-            // Every channel runs on its own - if one fails the others still go
-            const emailTask = (async () => {
-                try {
-                    const r = await fetch("https://formsubmit.co/ajax/" + MAIL_TO, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-                        body: JSON.stringify({
-                            _subject: "Inquiry: " + g('fProduct'), _template: "table", _captcha: "false",
-                            Product: g('fProduct'), Name: g('fName'), Phone: g('fPhone'), email: g('fEmail'), Requirement: g('fMsg')
-                        })
-                    });
-                    const d = await r.json().catch(() => ({}));
-                    return r.ok && (d.success === true || d.success === "true");
-                } catch (err) { return false; }
-            })();
-            const waTasks = WA_NUMBERS.map(async (n, i) => {
-                if (!WA_BOT_KEYS[i]) return opened.has(i) ? 'opened' : 'link';
-                try {
-                    await fetch("https://api.callmebot.com/whatsapp.php?phone=%2B" + n + "&text=" + encodeURIComponent(text) + "&apikey=" + encodeURIComponent(WA_BOT_KEYS[i]), { mode: "no-cors" });
-                    return 'auto';
-                } catch (err) { return 'link'; }
-            });
-            const [emailOk, ...waRes] = await Promise.all([emailTask, ...waTasks]);
-
+            let ok = false;
+            try {
+                const r = await fetch("https://formsubmit.co/ajax/" + MAIL_TO, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                    body: JSON.stringify({
+                        _subject: "Inquiry: " + g('fProduct'), _template: "table", _captcha: "false",
+                        Product: g('fProduct'), Name: g('fName'), Phone: g('fPhone'), email: g('fEmail'), Requirement: g('fMsg')
+                    })
+                });
+                const d = await r.json().catch(() => ({}));
+                ok = r.ok && (d.success === true || d.success === "true");
+            } catch (err) { ok = false; }
             const mailLink = "mailto:" + MAIL_TO + "?subject=" + encodeURIComponent("Inquiry: " + g('fProduct')) + "&body=" + encodeURIComponent(text);
-            let html = emailOk ? "<p>&#10003; Email sent.</p>"
-                               : `<p>Email could not be sent automatically. <a href="${mailLink}">Send it from your email app</a>.</p>`;
-            let allGood = emailOk;
-            waRes.forEach((mode, i) => {
-                const lab = WA_LABELS[i], link = waUrl(WA_NUMBERS[i], text);
-                if (mode === 'auto') html += `<p>&#10003; WhatsApp ${lab}: message sent.</p>`;
-                else {
-                    allGood = false;
-                    html += mode === 'opened'
-                        ? `<p>WhatsApp ${lab}: chat opened - press <b>Send</b> in WhatsApp. <a href="${link}" target="_blank" rel="noopener">Open again</a></p>`
-                        : `<p>WhatsApp ${lab}: <a href="${link}" target="_blank" rel="noopener">tap here to open the chat</a>, then press <b>Send</b>.</p>`;
-                }
-            });
-            status.className = "send-status show" + (allGood ? "" : " warn");
-            status.innerHTML = html;
+            status.className = "send-status show" + (ok ? "" : " warn");
+            status.innerHTML = ok
+                ? "<p>&#10003; Thank you! Your inquiry has been sent. We will reply as soon as possible.</p>"
+                : `<p>Your inquiry could not be sent automatically. <a href="${mailLink}">Click here to send it from your email app</a>.</p>`;
             btn.disabled = false; btn.textContent = 'Send Inquiry';
         });
 
@@ -739,14 +707,8 @@
         const waMenu = document.getElementById('waMenu');
         waBtn.addEventListener('click', e => {
             e.stopPropagation();
-            const hello = "Hello TSK Equipment and Machinery Trading LLC, I would like some information.";
-            const blocked = [];
-            WA_NUMBERS.forEach((n, i) => { if (!window.open(waUrl(n, hello), '_blank')) blocked.push(i); });
-            if (blocked.length) {   // browser allowed only one new tab - offer the rest
-                waMenu.innerHTML = '<div style="padding:6px 12px;font-size:13px;color:#5a6877">Tap to open the other WhatsApp chat:</div>' +
-                    blocked.map(i => `<a href="${waUrl(WA_NUMBERS[i], hello)}" target="_blank" rel="noopener">&#128172; ${WA_LABELS[i]}</a>`).join('');
-                waMenu.classList.add('open');
-            } else waMenu.classList.remove('open');
+            const open = waMenu.classList.toggle('open');
+            waBtn.setAttribute('aria-expanded', open);
         });
         document.addEventListener('click', e => {
             if (!e.target.closest('.wa-wrap')) { waMenu.classList.remove('open'); waBtn.setAttribute('aria-expanded', false); }
