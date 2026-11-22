@@ -180,11 +180,6 @@
         .variant img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: var(--light); border-radius: 10px; margin-bottom: 12px; display: block; }
         .variant h4.vname { margin-top: 0; font-size: 20px; }
         .dlg-in .main-img { width: 100%; aspect-ratio: 16 / 10; object-fit: contain; background: var(--light); border-radius: 12px; margin: 6px 0 14px; display: block; }
-        .send-status { display: none; margin-top: 16px; padding: 14px 16px; border-radius: 10px; background: #eef7ee; border: 1px solid #bfe0bf; font-size: 14px; }
-        .send-status.show { display: block; }
-        .send-status.warn { background: #fff6e8; border-color: #f0d3a0; }
-        .send-status a { color: var(--blue); font-weight: 700; }
-        .send-status p { margin: 4px 0; }
         .dlg-actions { margin-top: 18px; display: flex; gap: 12px; flex-wrap: wrap; }
         .dlg-actions .btn { padding: 12px 26px; }
         .btn-blue { background: #2f55d4; color: #fff; }
@@ -193,6 +188,31 @@
         .btn-green:hover { background: #1db955; }
         .btn-grey { background: #e8edf4; color: var(--navy); }
         .btn-grey:hover { background: #d6deea; }
+        /* result screen after sending */
+        .res { display: none; text-align: center; padding: 18px 6px 6px; }
+        #enqDlg.done .res { display: block; animation: pop .35s ease; }
+        #enqDlg.done .enq-main { display: none; }
+        .res h3 { margin: 14px 0 6px; padding: 0; font-size: 26px; }
+        .res.ok h3 { color: #17a34a; }
+        .res.bad h3 { color: #d93025; }
+        .res p { max-width: 420px; margin: 0 auto; color: #4a5766; }
+        .res .icon-wrap svg { width: 92px; height: 92px; }
+        .res .c { fill: none; stroke-width: 3; stroke-dasharray: 152; stroke-dashoffset: 152; animation: draw .6s ease forwards; }
+        .res .p { fill: none; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 40; stroke-dashoffset: 40; animation: draw .4s .5s ease forwards; }
+        .res.ok .c, .res.ok .p { stroke: #17a34a; }
+        .res.bad .c, .res.bad .p { stroke: #d93025; }
+        .res .bar { height: 5px; background: #e3e9f1; border-radius: 5px; overflow: hidden; margin: 20px auto 6px; max-width: 260px; }
+        .res .bar i { display: block; height: 100%; background: #17a34a; transform-origin: left; animation: shrink 4s linear forwards; }
+        .res.bad .bar, .res.bad .auto { display: none; }
+        .res .auto { font-size: 13px; color: #6b7785; }
+        .res .dlg-actions { justify-content: center; }
+        @keyframes draw { to { stroke-dashoffset: 0; } }
+        @keyframes shrink { to { transform: scaleX(0); } }
+        @keyframes pop { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+        .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: rot .7s linear infinite; vertical-align: -2px; margin-right: 6px; }
+        @keyframes rot { to { transform: rotate(360deg); } }
+        .toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 30px); background: #17a34a; color: #fff; padding: 13px 22px; border-radius: 40px; font-weight: 700; box-shadow: 0 8px 24px rgba(0,0,0,.3); opacity: 0; pointer-events: none; transition: .4s; z-index: 300; }
+        .toast.show { opacity: 1; transform: translate(-50%, 0); }
         form label { display: block; font-weight: 600; margin: 12px 0 4px; color: var(--navy); font-size: 14px; }
         form input, form textarea {
             width: 100%; padding: 11px 12px; border: 1px solid #c9d3e0; border-radius: 8px;
@@ -230,6 +250,8 @@
 
         @media (prefers-reduced-motion: reduce) {
             .hero::before { animation: none; }
+            .res .c, .res .p { animation: none; stroke-dashoffset: 0; }
+            .res .bar i { animation-duration: 4s; }
             .reveal { opacity: 1; transform: none; transition: none; }
         }
         @media (max-width: 600px) {
@@ -346,6 +368,8 @@
         &copy; 2025 TSK Equipment and Machinery Trading LLC. All Rights Reserved.
     </footer>
 
+    <div class="toast" id="toast"></div>
+
     <div class="wa-wrap">
         <div class="wa-menu" id="waMenu">
             <a href="https://wa.me/971581252891" target="_blank" rel="noopener">💬 +971 58 125 2891</a>
@@ -366,6 +390,7 @@
     <dialog id="enqDlg">
         <div class="dlg-in">
             <button class="x" data-close aria-label="Close">&times;</button>
+            <div class="enq-main">
             <h3>Send an Inquiry</h3>
             <p class="spec">We reply as soon as possible</p>
             <form id="enqForm" onsubmit="return false">
@@ -382,8 +407,16 @@
                 <div class="dlg-actions">
                     <button type="button" class="btn btn-blue" id="sendBtn">Send Inquiry</button>
                 </div>
-                <div class="send-status" id="sendStatus" role="status" aria-live="polite"></div>
             </form>
+            </div>
+            <div class="res" id="enqRes" role="status" aria-live="polite">
+                <div class="icon-wrap" id="resIcon"></div>
+                <h3 id="resTitle"></h3>
+                <p id="resMsg"></p>
+                <div class="bar"><i></i></div>
+                <p class="auto">This window will close automatically.</p>
+                <div class="dlg-actions" id="resActions"></div>
+            </div>
         </div>
     </dialog>
 
@@ -633,10 +666,36 @@
             detailDlg.scrollTop = 0;
         }
 
+        let closeTimer;
+        function resetEnq() { clearTimeout(closeTimer); enqDlg.classList.remove('done'); }
+        enqDlg.addEventListener('close', resetEnq);
+        function toast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3500);
+        }
+        const TICK = '<svg viewBox="0 0 52 52"><circle class="c" cx="26" cy="26" r="24"/><path class="p" d="M14 27l8 8 16-17"/></svg>';
+        const CROSS = '<svg viewBox="0 0 52 52"><circle class="c" cx="26" cy="26" r="24"/><path class="p" d="M17 17l18 18M35 17L17 35"/></svg>';
+        function showResult(ok, name, mailLink) {
+            document.getElementById('enqRes').className = 'res ' + (ok ? 'ok' : 'bad');
+            document.getElementById('resIcon').innerHTML = ok ? TICK : CROSS;
+            document.getElementById('resTitle').textContent = ok ? 'Inquiry Sent!' : 'Could not send';
+            document.getElementById('resMsg').textContent = ok
+                ? 'Thank you' + (name ? ', ' + name : '') + '. We have received your inquiry and will reply as soon as possible.'
+                : 'Please check your internet connection and try again, or send it from your email app.';
+            const act = document.getElementById('resActions');
+            act.innerHTML = ok
+                ? '<button type="button" class="btn btn-grey" data-close>Close now</button>'
+                : '<button type="button" class="btn btn-blue" id="tryAgain">Try again</button><a class="btn btn-grey" href="' + mailLink + '">Use email app</a>';
+            if (!ok) document.getElementById('tryAgain').onclick = () => enqDlg.classList.remove('done');
+            enqDlg.classList.add('done');
+            if (ok) closeTimer = setTimeout(() => { enqDlg.close(); toast('\u2713 Inquiry sent - we will reply soon'); }, 4000);
+        }
+
         function openInquiry(name) {
             document.getElementById('fProduct').value = name;
             document.getElementById('fMsg').value = '';
-            document.getElementById('sendStatus').className = 'send-status';
+            resetEnq();
             document.getElementById('sendBtn').disabled = false;
             document.getElementById('sendBtn').textContent = 'Send Inquiry';
             enqDlg.showModal();
@@ -677,10 +736,9 @@
             const form = document.getElementById('enqForm');
             if (!form.reportValidity()) return;
             const btn = document.getElementById('sendBtn');
-            const status = document.getElementById('sendStatus');
             const text = buildMessage();
             const g = id => document.getElementById(id).value.trim();
-            btn.disabled = true; btn.textContent = 'Sending...';
+            btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Sending...';
             let ok = false;
             try {
                 const r = await fetch("https://formsubmit.co/ajax/" + MAIL_TO, {
@@ -695,10 +753,9 @@
                 ok = r.ok && (d.success === true || d.success === "true");
             } catch (err) { ok = false; }
             const mailLink = "mailto:" + MAIL_TO + "?subject=" + encodeURIComponent("Inquiry: " + g('fProduct')) + "&body=" + encodeURIComponent(text);
-            status.className = "send-status show" + (ok ? "" : " warn");
-            status.innerHTML = ok
-                ? "<p>&#10003; Thank you! Your inquiry has been sent. We will reply as soon as possible.</p>"
-                : `<p>Your inquiry could not be sent automatically. <a href="${mailLink}">Click here to send it from your email app</a>.</p>`;
+            const name = g('fName');
+            if (ok) ['fName', 'fPhone', 'fEmail', 'fMsg'].forEach(id => document.getElementById(id).value = '');
+            showResult(ok, name, mailLink);
             btn.disabled = false; btn.textContent = 'Send Inquiry';
         });
 
