@@ -709,7 +709,7 @@
             const waTasks = WA_NUMBERS.map(async (n, i) => {
                 if (!WA_BOT_KEYS[i]) return opened.has(i) ? 'opened' : 'link';
                 try {
-                    await fetch("https://api.callmebot.com/whatsapp.php?phone=" + n + "&text=" + encodeURIComponent(text) + "&apikey=" + encodeURIComponent(WA_BOT_KEYS[i]), { mode: "no-cors" });
+                    await fetch("https://api.callmebot.com/whatsapp.php?phone=%2B" + n + "&text=" + encodeURIComponent(text) + "&apikey=" + encodeURIComponent(WA_BOT_KEYS[i]), { mode: "no-cors" });
                     return 'auto';
                 } catch (err) { return 'link'; }
             });
