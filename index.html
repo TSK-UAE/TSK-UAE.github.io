@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TSK Equipment and Machinery Trading LLC | Industrial Machinery, UAE</title>
     <meta name="description" content="TSK Equipment and Machinery Trading LLC, UAE. Plasma, laser and water jet cutting machines, welding machinery and spare parts.">
+    <link rel="preload" as="image" href="logo.jpg">
     <style>
         :root {
             --navy: #0a1f44;
@@ -135,7 +136,15 @@
         .card:hover .b-learn, .card:focus-within .b-learn { background: #fff; color: var(--navy); }
         .grid:hover .card:not(:hover) { filter: brightness(.6) saturate(.7); transform: scale(.98); }
         .card { transition: transform .35s, box-shadow .35s, border-color .35s, filter .35s; }
-        .card .content { position: relative; padding: 26px; width: 100%; }
+        .card { isolation: isolate; background-image: linear-gradient(135deg, #06173a, #0d3d82); }
+        .card::before { z-index: 1; }
+        .card-bg {
+            position: absolute; inset: 0; z-index: 0;
+            background-size: cover; background-position: center;
+            opacity: 0; transition: opacity .7s ease;
+        }
+        .card-bg.ready { opacity: 1; }
+        .card .content { position: relative; z-index: 2; padding: 26px; width: 100%; }
         .card h3 { font-size: 23px; margin-bottom: 6px; line-height: 1.25; }
         .card .spec { color: #ffa733; font-weight: 700; font-size: 16px; margin-bottom: 8px; }
         .card p { font-size: 15px; opacity: .95; margin-bottom: 18px; }
@@ -168,9 +177,14 @@
         .dlg-in td:first-child { font-weight: 700; color: var(--navy); width: 32%; background: var(--light); }
         .dlg-in .note { font-size: 13px; color: #6b7785; margin-top: 12px; }
         .variant { border: 1px solid #dbe3ee; border-radius: 14px; padding: 18px; margin-top: 20px; background: #fbfcfe; }
-        .variant img { width: 100%; max-height: 260px; object-fit: cover; border-radius: 10px; margin-bottom: 12px; display: block; }
+        .variant img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: var(--light); border-radius: 10px; margin-bottom: 12px; display: block; }
         .variant h4.vname { margin-top: 0; font-size: 20px; }
-        .dlg-in .main-img { width: 100%; height: auto; max-height: 360px; object-fit: contain; background: var(--light); border-radius: 12px; margin: 6px 0 14px; display: block; }
+        .dlg-in .main-img { width: 100%; aspect-ratio: 16 / 10; object-fit: contain; background: var(--light); border-radius: 12px; margin: 6px 0 14px; display: block; }
+        .send-status { display: none; margin-top: 16px; padding: 14px 16px; border-radius: 10px; background: #eef7ee; border: 1px solid #bfe0bf; font-size: 14px; }
+        .send-status.show { display: block; }
+        .send-status.warn { background: #fff6e8; border-color: #f0d3a0; }
+        .send-status a { color: var(--blue); font-weight: 700; }
+        .send-status p { margin: 4px 0; }
         .dlg-actions { margin-top: 18px; display: flex; gap: 12px; flex-wrap: wrap; }
         .dlg-actions .btn { padding: 12px 26px; }
         .btn-blue { background: #2f55d4; color: #fff; }
@@ -195,8 +209,16 @@
 
         footer { background: #06142e; color: #cfd8e6; text-align: center; padding: 26px 15px; font-size: 14px; }
 
+        .wa-wrap { position: fixed; right: 20px; bottom: 20px; z-index: 200; text-align: right; }
+        .wa-menu {
+            display: none; background: #fff; border-radius: 14px; padding: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,.3); margin-bottom: 10px; text-align: left;
+        }
+        .wa-menu.open { display: block; }
+        .wa-menu a { display: block; padding: 11px 16px; color: var(--navy); font-weight: 700; text-decoration: none; border-radius: 8px; white-space: nowrap; }
+        .wa-menu a:hover { background: #e9f9ef; color: #128c4a; }
         .wa {
-            position: fixed; right: 20px; bottom: 20px; z-index: 200;
+            border: 0; cursor: pointer; font-family: inherit; font-size: 16px;
             background: #25d366; color: #fff; text-decoration: none;
             padding: 14px 20px; border-radius: 40px; font-weight: 700;
             box-shadow: 0 6px 18px rgba(0,0,0,.3); transition: .3s;
@@ -324,7 +346,13 @@
         &copy; 2025 TSK Equipment and Machinery Trading LLC. All Rights Reserved.
     </footer>
 
-    <a class="wa" href="https://wa.me/971581252891" target="_blank" rel="noopener">💬 WhatsApp</a>
+    <div class="wa-wrap">
+        <div class="wa-menu" id="waMenu">
+            <a href="https://wa.me/971581252891" target="_blank" rel="noopener">💬 +971 58 125 2891</a>
+            <a href="https://wa.me/971581252871" target="_blank" rel="noopener">💬 +971 58 125 2871</a>
+        </div>
+        <button type="button" class="wa" id="waBtn" aria-haspopup="true" aria-expanded="false">💬 WhatsApp</button>
+    </div>
 
     <!-- LEARN MORE POP-UP -->
     <dialog id="detailDlg">
@@ -352,16 +380,17 @@
                 <label for="fMsg">Your requirement</label>
                 <textarea id="fMsg" rows="4" placeholder="Machine size, material and thickness, quantity, delivery location..."></textarea>
                 <div class="dlg-actions">
-                    <button type="button" class="btn btn-green" id="sendWa">Send on WhatsApp</button>
-                    <button type="button" class="btn btn-blue" id="sendMail">Send by Email</button>
+                    <button type="button" class="btn btn-blue" id="sendBtn">Send Inquiry</button>
                 </div>
+                <div class="send-status" id="sendStatus" role="status" aria-live="polite"></div>
             </form>
         </div>
     </dialog>
 
     <script>
         // ============ COMPANY CONTACT (change numbers here only) ============
-        const WA_NUMBER = "971581252891";       // main number used for WhatsApp, calls and all inquiries
+        const WA_NUMBERS = ["971581252891", "971581252871"];   // every inquiry is sent to both numbers
+        const WA_LABELS  = ["+971 58 125 2891", "+971 58 125 2871"];
         const MAIL_TO = "tsktrading2025@gmail.com";
 
         // ============ PRODUCT LIST (edit text here) ============
@@ -537,7 +566,8 @@
         // ============ BUILD CARDS ============
         const grid = document.getElementById('productGrid');
         grid.innerHTML = PRODUCTS.map((p, i) => `
-            <article class="card reveal" style="background-image:${p.bg}">
+            <article class="card reveal">
+                <div class="card-bg" style="background-image:${p.bg}"></div>
                 <div class="content">
                     <h3>${p.title}</h3>
                     <div class="spec">${p.spec}</div>
@@ -548,6 +578,21 @@
                     </div>
                 </div>
             </article>`).join('');
+
+        // Show each card picture only after it has fully loaded (no blinking), then pre-load pop-up pictures
+        document.querySelectorAll('.card-bg').forEach(el => {
+            const m = el.style.backgroundImage.match(/url\(["']?(.*?)["']?\)/);
+            const show = () => el.classList.add('ready');
+            if (!m) { show(); return; }
+            const im = new Image();
+            im.onload = im.onerror = show;
+            im.src = m[1];
+            if (im.complete) show();
+            setTimeout(show, 4000);
+        });
+        window.addEventListener('load', () => {
+            PRODUCTS.forEach(p => [p.img, ...(p.variants || []).map(v => v.img)].filter(Boolean).forEach(src => { new Image().src = src; }));
+        });
 
         // ============ POP-UPS ============
         const detailDlg = document.getElementById('detailDlg');
@@ -593,6 +638,9 @@
         function openInquiry(name) {
             document.getElementById('fProduct').value = name;
             document.getElementById('fMsg').value = '';
+            document.getElementById('sendStatus').className = 'send-status';
+            document.getElementById('sendBtn').disabled = false;
+            document.getElementById('sendBtn').textContent = 'Send Inquiry';
             enqDlg.showModal();
         }
 
@@ -627,15 +675,63 @@
                 "Requirement: " + g('fMsg')
             ].join("\n");
         }
-        document.getElementById('sendWa').addEventListener('click', () => {
-            if (!document.getElementById('enqForm').reportValidity()) return;
-            window.open("https://wa.me/" + WA_NUMBER + "?text=" + encodeURIComponent(buildMessage()), "_blank");
+        const waUrl = (n, text) => "https://wa.me/" + n + (text ? "?text=" + encodeURIComponent(text) : "");
+
+        document.getElementById('sendBtn').addEventListener('click', async () => {
+            const form = document.getElementById('enqForm');
+            if (!form.reportValidity()) return;
+            const btn = document.getElementById('sendBtn');
+            const status = document.getElementById('sendStatus');
+            const text = buildMessage();
+            const g = id => document.getElementById(id).value.trim();
+
+            // 1) WhatsApp - open a chat with BOTH numbers (must happen straight from the click)
+            WA_NUMBERS.forEach(n => window.open(waUrl(n, text), '_blank'));
+
+            // 2) Email - sent automatically in the background
+            btn.disabled = true; btn.textContent = 'Sending...';
+            let emailOk = false;
+            try {
+                const r = await fetch("https://formsubmit.co/ajax/" + MAIL_TO, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                    body: JSON.stringify({
+                        _subject: "Inquiry: " + g('fProduct'),
+                        _template: "table",
+                        _captcha: "false",
+                        Product: g('fProduct'),
+                        Name: g('fName'),
+                        Phone: g('fPhone'),
+                        email: g('fEmail'),
+                        Requirement: g('fMsg')
+                    })
+                });
+                const d = await r.json().catch(() => ({}));
+                emailOk = r.ok && (d.success === true || d.success === "true");
+            } catch (err) { emailOk = false; }
+
+            const mailLink = "mailto:" + MAIL_TO + "?subject=" + encodeURIComponent("Inquiry: " + g('fProduct')) + "&body=" + encodeURIComponent(text);
+            const waLinks = WA_NUMBERS.map((n, i) => `<a href="${waUrl(n, text)}" target="_blank" rel="noopener">${WA_LABELS[i]}</a>`).join(" &nbsp;|&nbsp; ");
+            status.className = "send-status show" + (emailOk ? "" : " warn");
+            status.innerHTML =
+                (emailOk ? "<p>&#10003; Inquiry sent by email.</p>"
+                         : `<p>Email could not be sent automatically. <a href="${mailLink}">Click here to send it from your email app</a>.</p>`) +
+                "<p>&#10003; WhatsApp opened for both numbers. If a chat did not open, tap: " + waLinks + "</p>";
+            btn.disabled = false; btn.textContent = 'Send Inquiry';
         });
-        document.getElementById('sendMail').addEventListener('click', () => {
-            if (!document.getElementById('enqForm').reportValidity()) return;
-            const subject = "Inquiry: " + document.getElementById('fProduct').value;
-            window.location.href = "mailto:" + MAIL_TO + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(buildMessage());
+
+        // ============ FLOATING WHATSAPP (two numbers) ============
+        const waBtn = document.getElementById('waBtn');
+        const waMenu = document.getElementById('waMenu');
+        waBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            const open = waMenu.classList.toggle('open');
+            waBtn.setAttribute('aria-expanded', open);
         });
+        document.addEventListener('click', e => {
+            if (!e.target.closest('.wa-wrap')) { waMenu.classList.remove('open'); waBtn.setAttribute('aria-expanded', false); }
+        });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') waMenu.classList.remove('open'); });
 
         // ============ FADE-IN ON SCROLL ============
         const io = new IntersectionObserver((entries) => {
